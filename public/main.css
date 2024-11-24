@@ -1,0 +1,74 @@
+* {
+    margin: 0;
+    padding: 0;
+    font-family: Lato, sans-serif;
+    /* box-sizing: border-box; */
+    /* height: 100%; */
+}
+
+#IDselect {
+    position: relative;
+    /* top: 40px; */
+}
+
+#controls {
+    width: 100vw;
+    height: 5vh;
+    background-color: 192024;
+    font-weight: bold;
+}
+
+button {
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    color: white;
+    cursor: pointer;
+}
+
+
+ul {
+    list-style: none;
+    margin: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    display: flex;
+    height: 100%;
+}
+
+li {
+    text-decoration: none;
+    color: white;
+    padding-right: 3em;
+    position: relative;
+}
+
+li:first-child {
+    margin-right: auto;
+    margin-left: 3em;
+  }
+
+li::after {
+    content: "";
+    position: absolute;
+    display: block;
+    height: 0.4em;
+    width: 0%;
+    bottom: -1em;
+  }
+
+/* div {
+    color: white;
+    padding-right: 15em;
+    text-decoration: none;
+    position: relative;
+    transition: all ease-in-out s;
+} */
+
+#whiteboard,
+#tempwhiteboard {
+    border: 2px solid black;
+    cursor: crosshair;
+    position: fixed;
+}

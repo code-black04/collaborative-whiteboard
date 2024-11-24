@@ -1,0 +1,75 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Whiteboard App</title>
+
+    <link rel="stylesheet" href="main.css" />
+    <script
+      type="text/JavaScript"
+      src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js?ver=1.4.2"
+    ></script>
+  </head>
+  <body>
+
+    <div id="controls">
+      <ul>
+        <li>
+          <h3>
+            Whiteboard App 
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg>
+          </h3>
+        </li>
+        <li>
+          <label for="PencilColour">Select Colour:</label>
+          <select id="PencilColour">
+            <option value="black">Black</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+            <option value="orange">Orange</option>
+            <option value="purple">Purple</option>
+            <option value="brown">Brown</option>
+          </select>
+        </li>
+        <li>
+          <label for="SelectShape">Select Tool:</label>
+          <select id="SelectShape">
+            <option disabled selected value> -- options -- </option>
+            <option option="Line">Line</option>
+            <option option="Circle">Circle</option>
+            <option option="Rectangle">Rectangle</option>
+            <option option="Text">Text</option>
+          </select>
+        </li>
+        <li>
+          <button id="saveButton" type="button">Save Image</button>
+        </li>
+        <li>
+          <button id="redrawButton" type="button">Clear</button>
+        </li>
+        <li>
+          <label for="FontSize">Font Size:</label>
+          <select id="FontSize">
+            <option value="10">10px</option>
+            <option value="13">13px</option>
+            <option value="16">16px</option>
+            <option value="20">20px</option>
+            <option value="24">24px</option>
+            <option value="32">32px</option>
+          </select>
+        </li>
+      </ul>    
+    </div>
+
+    <canvas id="whiteboard"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.3/socket.io.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
