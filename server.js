@@ -104,8 +104,8 @@ async function main() {
 
     app.use(express.static("public"));
 
-    var REDIS_PORT = process.env.REDIS_PORT;
-    http.listen(PORT, () => console.log(`REdis server started on port ${PORT}`));
+    var PORT = process.env.PORT || 3000;
+    http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 }
 
 main();
