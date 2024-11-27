@@ -7,7 +7,7 @@ const app = express();
 const path = require("path");
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
-require("dotenv").config();
+const dotenv = require("dotenv").config();
 
 const PORT = process.env.PORT || 3000;
 const REDIS_HOST = process.env.REDIS_HOST;
