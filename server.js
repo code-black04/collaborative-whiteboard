@@ -104,6 +104,13 @@ async function main() {
 
     app.use(express.static("public"));
 
+    app.get("/config", (req, res) => {
+        res.json({
+            baseUrl: process.env.BASE_URL
+        });
+    });
+    
+
     var PORT = process.env.PORT || 3000;
     http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 }

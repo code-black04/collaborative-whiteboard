@@ -235,8 +235,13 @@ function onEvent(event, pos) {
 }
 
 // Main
-window.onload = function () {
-    io = io.connect("http://localhost:3000");
+window.onload = async function () {
+    const response = await fetch("/config");
+    const config = await response.json();
+    const baseUrl = config.baseUrl;
+
+    io = io.connect(baseUrl);
+    
     for (const [key, value] of Object.entries(eventHandler)) {
         io.on(key, value);
     }
