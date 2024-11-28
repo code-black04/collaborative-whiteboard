@@ -7,7 +7,7 @@ const app = express();
 const path = require("path");
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
-require("dotenv").config();
+const dotenv = require("dotenv").config();
 
 const PORT = process.env.PORT || 3000;
 const REDIS_HOST = process.env.REDIS_HOST;
@@ -104,8 +104,18 @@ async function main() {
 
     app.use(express.static("public"));
 
+    app.get("/config", (req, res) => {
+        res.json({
+            baseUrl: process.env.BASE_URL
+        });
+    });
+    
+    app.get('/health', (req, res) => {
+        res.status(200).send('Application is healthy');
+    })
+
     var PORT = process.env.PORT || 3000;
-    http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+    http.listen(PORT, '0.0.0.0', () => console.log(`Server started on port ${PORT}`));
 }
 
 main();

@@ -1,0 +1,24 @@
+# To run locally to test
+
+version: '3.9'
+services:
+  whiteboard:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  # mongo:
+  #   image: mongo:5
+  #   container_name: mongo-container
+  #   ports:
+  #     - "27017:27017"

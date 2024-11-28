@@ -18,7 +18,8 @@
       "uid2": "^1.0.0",
       "mongodb": "^5.7.0",
       "utf-8-validate": "^5.0.10",
-      "winston":"^3.17.0"
+      "winston":"^3.17.0",
+      "dotenv":"^16.4.5"
     },
     "devDependencies": {
       "nodemon": "^2.0.20"
