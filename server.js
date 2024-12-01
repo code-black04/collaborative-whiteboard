@@ -4,22 +4,23 @@ const { MongoClient } = require("mongodb");
 
 const express = require("express");
 const app = express();
-const path = require("path");
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
-const dotenv = require("dotenv").config();
 
 const PORT = process.env.PORT || 3000;
 const REDIS_HOST = process.env.REDIS_HOST;
 const REDIS_PORT = process.env.REDIS_PORT;
 const MONGO_URI = process.env.MONGO_URI;
 const SCHEDULAR_TIME = process.env.SCHEDULAR_TIME;
+const TAKE_SNAPSHOT = process.env.TAKE_SNAPSHOT;
+
 
 console.log("REDIS_HOST:", REDIS_HOST);
 console.log("REDIS_PORT:", REDIS_PORT);
 console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI);
 console.log("SCHEDULAR_TIME:", SCHEDULAR_TIME);
+console.log("TAKE_SNAPSHOT:", TAKE_SNAPSHOT);
 
 async function main() {
 
@@ -80,7 +81,11 @@ async function main() {
     const connections = new Set();
 
     //To updateState in mongodb from redis
-    setInterval(() => saveEventsToDatabase(pubClient, mongoClient), SCHEDULAR_TIME * 60 * 1000);
+    if (TAKE_SNAPSHOT == "true") {
+        console.log("set saveEventsToDatabase....");
+        setInterval(() => saveEventsToDatabase(pubClient, mongoClient), SCHEDULAR_TIME * 25 * 1000);
+        setInterval(() => clearSnapshotFromDatabase(pubClient, mongoClient), 2 * 60 * 1000);
+    }
 
     //New socket connection
     io.on("connect", (socket) => {
@@ -109,7 +114,7 @@ async function main() {
             baseUrl: process.env.BASE_URL
         });
     });
-    
+
     app.get('/health', (req, res) => {
         res.status(200).send('Application is healthy');
     })
@@ -121,6 +126,7 @@ async function main() {
 main();
 
 async function saveEventsToDatabase(pubClient, mongoClient) {
+    const whiteboardEventsCollection = await mongoClient.db("whiteboard").collection("whiteboard_events");
     if (pubClient?.isReady) {
         console.log("saveEventsToDatabase by redis...");
         const reply = await pubClient.lRange('whiteboard_events', 0, -1);
@@ -135,15 +141,71 @@ async function saveEventsToDatabase(pubClient, mongoClient) {
             if (redisEventsList.length == 0) {
                 console.log("empty events list received");
             }
-
+            let snapshot = []
             for (let i = 0; i < redisEventsList.length; i += 2) {
                 const eventName = redisEventsList[i];
                 const eventData = redisEventsList[i + 1];
-                console.log("emit populateMongoDB ", eventName, eventData);
+                //console.log("emit populateMongoDB ", eventName, eventData);
                 await populateMongoDB(mongoClient, eventName, eventData);
+                snapshot[i / 2] = { name: eventName, data: eventData };
+            }
+            if (snapshot.length > 0) {
+                console.log("new snapshot length:", snapshot.length);
+                await addSnapshot(mongoClient, snapshot);
             }
             pubClient.del("whiteboard_events");
         }
+    } else {
+        console.log("redis down taking snapshot from mongo...");
+        const results = await whiteboardEventsCollection.find().sort({ _id: 1 }).toArray();
+        //console.log("results size ", results);
+        let snapshot = []
+        for (let i = 0; i < results.length; i += 1) {
+            const event = results[i];
+            snapshot[i] = { name: event.name, data: event.data };
+        }
+        if (snapshot.length > 0) {
+            console.log("emit addSnapshot ", snapshot.length);
+            await addSnapshot(mongoClient, snapshot);
+        }
+    }
+    // Drop the collection
+    if (whiteboardEventsCollection) {
+        const result = await whiteboardEventsCollection.deleteMany({});
+        if (result) {
+            console.log("Collection whiteboard_events dropped successfully.");
+        } else {
+            console.log("Collection whiteboard_events could not be dropped.");
+        }
+    }
+
+}
+
+async function clearSnapshotFromDatabase(pubClient, mongoClient) {
+    const whiteboardDb = await mongoClient.db("whiteboard");
+    const nextId = await getNextSequence(whiteboardDb, "whiteboard_snapshots");
+    const whiteboardEventsCollection = await whiteboardDb.collection("whiteboard_snapshots");
+
+    // Count total documents
+    const totalDocs = await whiteboardEventsCollection.countDocuments();
+
+    // If more than 5 documents, delete the excess
+    if (totalDocs > 5) {
+        const excessDocs = totalDocs - 5;
+
+        // Find the excess documents (oldest ones)
+        const oldDocs = await whiteboardEventsCollection.find()
+            .sort({ _id: 1 }) // Ascending order by _id (oldest first)
+            .limit(excessDocs)
+            .toArray();
+
+        // Delete each of the excess documents
+        for (const doc of oldDocs) {
+            await whiteboardEventsCollection.deleteOne({ _id: doc._id });
+        }
+        console.log(`${excessDocs} old documents deleted.`);
+    } else {
+        console.log("No excess documents to delete.");
     }
 }
 
@@ -158,7 +220,10 @@ function clearWhiteboard(socket, pubClient, mongoClient) {
                         const whiteboardDb = await mongoClient.db("whiteboard");
                         const whiteboardEventsCollection = await whiteboardDb.collection("whiteboard_events");
                         const result = await whiteboardEventsCollection.deleteMany({});
-                        console.log(`Cleared ${result.deletedCount} documents from the collection.`);
+                        console.log(`Cleared ${result.deletedCount} documents from the whiteboard_events collection.`);
+                        const snapshotCollection = await whiteboardDb.collection("whiteboard_snapshots");
+                        const result1 = await snapshotCollection.deleteMany({});
+                        console.log(`Cleared ${result1.deletedCount} documents from the whiteboard_snapshots collection.`);
                     }
                     io.emit("clear");
                     console.log("Whiteboard cleared");
@@ -181,7 +246,6 @@ async function emitDrawEvents(socket, pubClient, mongoClient) {
             }
 
             if (pubClient?.isReady) {
-                pubClient.get("sdfsdf");
                 pubClient.rPush("whiteboard_events", JSON.stringify(name));
                 pubClient.rPush("whiteboard_events", JSON.stringify(data));
             } else {
@@ -211,6 +275,20 @@ async function populateMongoDB(mongoClient, name, data) {
     });
 }
 
+async function addSnapshot(mongoClient, snapshot) {
+    const whiteboardDb = await mongoClient.db("whiteboard");
+    const nextId = await getNextSequence(whiteboardDb, "whiteboard_snapshots");
+    const whiteboardEventsCollection = await whiteboardDb.collection("whiteboard_snapshots");
+    await whiteboardEventsCollection.insertOne({
+        _id: nextId,
+        timestamp: new Date(),
+        event_list: snapshot
+    }, (error) => {
+        console.log("Error while addSnapshot....")
+        if (error) console.log(error);
+    });
+}
+
 async function initNewUser(pubClient, socket, mongoClient) {
     console.log("initNewUser...");
     try {
@@ -222,15 +300,26 @@ async function initNewUser(pubClient, socket, mongoClient) {
         }
 
         if (mongoClient) {
-            console.log("init by mongoclient...");
+
+            console.log("init by mongoclient...load last 3 snapshots");
+            const snapshot = await mongoClient.db("whiteboard").collection("whiteboard_snapshots");
+            const eventList = await snapshot.find().sort({ _id: -1 }).toArray();
+            for (const snap of eventList) {
+                console.log("Mongo snap emit ", snap.event_list.length);
+                for (const event of snap.event_list) {
+                    socket.emit(event.name, event.data);
+                }
+            }
+
+            console.log("init by mongoclient...load last from whiteboard events, incase redis down..");
             const whiteboardEventsCollection = await mongoClient.db("whiteboard").collection("whiteboard_events");
             const results = await whiteboardEventsCollection.find().sort({ _id: 1 }).toArray();
-            //console.log("results size ", results);
+            console.log("results size ", results.length);
             for (const event of results) {
-                console.log("Mongo event emit ", event.name);
                 socket.emit(event.name, event.data);
             }
         }
+
         if (pubClient?.isReady) {
             console.log("init by redis...");
             const reply = await pubClient.lRange('whiteboard_events', 0, -1);
@@ -250,7 +339,6 @@ async function initNewUser(pubClient, socket, mongoClient) {
                 for (let i = 0; i < redisEventsList.length; i += 2) {
                     const eventName = redisEventsList[i];
                     const eventData = redisEventsList[i + 1];
-                    // console.log("emit event ", eventName, eventData);
                     socket.emit(eventName, eventData);
                 }
             }

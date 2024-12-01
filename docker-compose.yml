@@ -2,14 +2,41 @@
 
 version: '3.9'
 services:
-  whiteboard:
-    build:
-      context: .
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
+      - "80:80"
       - "3000:3000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - whiteboard_one
+      - whiteboard_two
+
+  whiteboard_one:
+    image: whiteboard:1.0
+    # build:
+    #   context: .
+    ports:
+      - "3001:3000"
     env_file: .env
     depends_on:
       - redis
+      - mongo
+
+  whiteboard_two:
+    image: whiteboard:1.0
+    # build:
+    #   context: .
+    ports:
+      - "3002:3000"
+    env_file: .env
+    environment:
+      TAKE_SNAPSHOT: "false"
+    depends_on:
+      - redis
+      - mongo
 
   redis:
     image: redis/redis-stack:latest
@@ -17,8 +44,14 @@ services:
     ports:
       - "6379:6379"
 
-  # mongo:
-  #   image: mongo:5
-  #   container_name: mongo-container
-  #   ports:
-  #     - "27017:27017"
+  mongo:
+    image: mongo:5
+    container_name: mongo-container
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+
