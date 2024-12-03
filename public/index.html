@@ -71,5 +71,35 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.3/socket.io.js"></script>
     <script src="main.js"></script>
+
+    <script>
+      window.onload = function () {
+        let reconnectInterval;
+
+        // As served on the same domain as our server, no url provided
+        // use WebSocket first if available to avoid using sticky sessions
+        const socket = io({
+          transports: ["websocket", "polling"] 
+        });
+  
+        function connect() {
+          socket.connect();
+
+          socket.on('connect', () => {
+            // console.log('Connected to server');
+            clearInterval(reconnectInterval);
+          });
+  
+          socket.on('disconnect', () => {
+            console.log('Disconnected from socket server. Trying reconnecting in 2 seconds..');
+          });
+
+          // Retry connection every 2 seconds
+          reconnectInterval = setInterval(connect, 3000);
+        }
+  
+        connect();
+      }
+    </script>
   </body>
 </html>

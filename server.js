@@ -2,12 +2,22 @@ const adapter = require("@socket.io/redis-adapter");
 const redis = require("redis");
 const { MongoClient } = require("mongodb");
 const express = require("express");
-const app = express();
+const { createServer } = require('node:http');
+const { Server } = require('socket.io');
 const path = require("path");
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
 const dotenv = require("dotenv").config();
 
+
+// Creating server instances
+const app = express();
+const http = createServer(app);
+
+// handle disconnections "Connection state recovery"
+const io = new Server(http, {
+    connectionStateRecovery: {}
+});
+
+// Environment variables
 const PORT = process.env.PORT || 3000;
 const REDIS_HOST = process.env.REDIS_HOST;
 const REDIS_PORT = process.env.REDIS_PORT;
