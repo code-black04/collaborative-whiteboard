@@ -91,10 +91,10 @@
           });
   
           socket.on('disconnect', () => {
-            console.log('Disconnected from socket server. Trying reconnecting in 2 seconds..');
+            console.log('Disconnected from socket server. Trying reconnecting in 3 seconds..');
           });
 
-          // Retry connection every 2 seconds
+          // Retry connection every 3 seconds
           reconnectInterval = setInterval(connect, 3000);
         }
   
