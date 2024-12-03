@@ -1,7 +1,6 @@
 const adapter = require("@socket.io/redis-adapter");
 const redis = require("redis");
 const { MongoClient } = require("mongodb");
-
 const express = require("express");
 const app = express();
 const path = require("path");
@@ -21,10 +20,38 @@ console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI);
 console.log("SCHEDULAR_TIME:", SCHEDULAR_TIME);
 
-async function main() {
 
-    //mongo-db setup
+// Express Middleware for serving static files
+app.use(express.static('public'));
+
+
+// Routes 
+app.get('/', function (req, res) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get("/config", (req, res) => {
+    res.json({
+        baseUrl: process.env.BASE_URL
+    });
+});
+
+app.get('/health', (req, res) => {
+    res.status(200).send('Application is healthy');
+});
+
+
+// Configure & start the server
+main();
+http.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
+});
+
+
+async function main() {
+    // MongoDB setup
     const mongoClient = new MongoClient(MONGO_URI);
+
     try {
         await mongoClient.connect();
         console.log("Connected to MongoDB");
@@ -101,24 +128,8 @@ async function main() {
 
         });
     });
-
-    app.use(express.static("public"));
-
-    app.get("/config", (req, res) => {
-        res.json({
-            baseUrl: process.env.BASE_URL
-        });
-    });
-    
-    app.get('/health', (req, res) => {
-        res.status(200).send('Application is healthy');
-    })
-
-    var PORT = process.env.PORT || 3000;
-    http.listen(PORT, '0.0.0.0', () => console.log(`Server started on port ${PORT}`));
 }
 
-main();
 
 async function saveEventsToDatabase(pubClient, mongoClient) {
     if (pubClient?.isReady) {
