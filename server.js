@@ -83,8 +83,8 @@ async function main() {
     //To updateState in mongodb from redis
     if (TAKE_SNAPSHOT == "true") {
         console.log("set saveEventsToDatabase....");
-        setInterval(() => saveEventsToDatabase(pubClient, mongoClient), SCHEDULAR_TIME * 25 * 1000);
-        setInterval(() => clearSnapshotFromDatabase(pubClient, mongoClient), 2 * 60 * 1000);
+        setInterval(() => saveEventsToDatabase(pubClient, mongoClient), SCHEDULAR_TIME * 60 * 1000);
+        setInterval(() => clearSnapshotFromDatabase(pubClient, mongoClient), 30 * 60 * 1000);
     }
 
     //New socket connection
@@ -190,8 +190,8 @@ async function clearSnapshotFromDatabase(pubClient, mongoClient) {
     const totalDocs = await whiteboardSnapshotCollection.countDocuments();
 
     // If more than 5 documents, delete the excess
-    if (totalDocs > 5) {
-        const excessDocs = totalDocs - 5;
+    if (totalDocs > 1) {
+        const excessDocs = totalDocs - 1;
 
         // Find the excess documents (oldest ones)
         const oldDocs = await whiteboardSnapshotCollection.find()
