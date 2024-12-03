@@ -146,7 +146,7 @@ async function saveEventsToDatabase(pubClient, mongoClient) {
                 const eventName = redisEventsList[i];
                 const eventData = redisEventsList[i + 1];
                 //console.log("emit populateMongoDB ", eventName, eventData);
-                await populateMongoDB(mongoClient, eventName, eventData);
+                //await populateMongoDB(mongoClient, eventName, eventData);
                 snapshot[i / 2] = { name: eventName, data: eventData };
             }
             if (snapshot.length > 0) {
@@ -184,24 +184,24 @@ async function saveEventsToDatabase(pubClient, mongoClient) {
 async function clearSnapshotFromDatabase(pubClient, mongoClient) {
     const whiteboardDb = await mongoClient.db("whiteboard");
     const nextId = await getNextSequence(whiteboardDb, "whiteboard_snapshots");
-    const whiteboardEventsCollection = await whiteboardDb.collection("whiteboard_snapshots");
+    const whiteboardSnapshotCollection = await whiteboardDb.collection("whiteboard_snapshots");
 
     // Count total documents
-    const totalDocs = await whiteboardEventsCollection.countDocuments();
+    const totalDocs = await whiteboardSnapshotCollection.countDocuments();
 
     // If more than 5 documents, delete the excess
     if (totalDocs > 5) {
         const excessDocs = totalDocs - 5;
 
         // Find the excess documents (oldest ones)
-        const oldDocs = await whiteboardEventsCollection.find()
+        const oldDocs = await whiteboardSnapshotCollection.find()
             .sort({ _id: 1 }) // Ascending order by _id (oldest first)
             .limit(excessDocs)
             .toArray();
 
         // Delete each of the excess documents
         for (const doc of oldDocs) {
-            await whiteboardEventsCollection.deleteOne({ _id: doc._id });
+            await whiteboardSnapshotCollection.deleteOne({ _id: doc._id });
         }
         console.log(`${excessDocs} old documents deleted.`);
     } else {
@@ -278,8 +278,8 @@ async function populateMongoDB(mongoClient, name, data) {
 async function addSnapshot(mongoClient, snapshot) {
     const whiteboardDb = await mongoClient.db("whiteboard");
     const nextId = await getNextSequence(whiteboardDb, "whiteboard_snapshots");
-    const whiteboardEventsCollection = await whiteboardDb.collection("whiteboard_snapshots");
-    await whiteboardEventsCollection.insertOne({
+    const whiteboardSnapshotCollection = await whiteboardDb.collection("whiteboard_snapshots");
+    await whiteboardSnapshotCollection.insertOne({
         _id: nextId,
         timestamp: new Date(),
         event_list: snapshot
