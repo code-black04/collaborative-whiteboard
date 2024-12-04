@@ -14,7 +14,6 @@ const REDIS_PORT = process.env.REDIS_PORT;
 const MONGO_URI = process.env.MONGO_URI;
 const SCHEDULAR_TIME = process.env.SCHEDULAR_TIME;
 const TAKE_SNAPSHOT = process.env.TAKE_SNAPSHOT;
-const AWS_REGION = process.env.AWS_REGION || "eu-west-2";
 
 AWS.config.update({ region: AWS_REGION });
 const cloudwatch = new AWS.CloudWatch();
