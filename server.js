@@ -1,7 +1,7 @@
 const adapter = require("@socket.io/redis-adapter");
 const redis = require("redis");
 const { MongoClient } = require("mongodb");
-
+const AWS = require("aws-sdk");
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
@@ -14,7 +14,10 @@ const REDIS_PORT = process.env.REDIS_PORT;
 const MONGO_URI = process.env.MONGO_URI;
 const SCHEDULAR_TIME = process.env.SCHEDULAR_TIME;
 const TAKE_SNAPSHOT = process.env.TAKE_SNAPSHOT;
+const AWS_REGION = process.env.AWS_REGION || "eu-west-2";
 
+AWS.config.update({ region: AWS_REGION });
+const cloudwatch = new AWS.CloudWatch();
 
 console.log("REDIS_HOST:", REDIS_HOST);
 console.log("REDIS_PORT:", REDIS_PORT);
@@ -22,6 +25,7 @@ console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI);
 console.log("SCHEDULAR_TIME:", SCHEDULAR_TIME);
 console.log("TAKE_SNAPSHOT:", TAKE_SNAPSHOT);
+console.log("AWS_REGION:", AWS_REGION);
 
 async function main() {
 
@@ -94,6 +98,8 @@ async function main() {
         console.log(`${socket.id} has connected`);
         console.log("Connected: " + connections.size);
 
+        publishToCloudWatch(connections.size);
+
         initNewUser(pubClient, socket, mongoClient);
 
         clearWhiteboard(socket, pubClient, mongoClient);
@@ -125,6 +131,33 @@ async function main() {
 }
 
 main();
+
+async function publishToCloudWatch(connectionsCount) {
+    const params = {
+        MetricData: [
+            {
+                MetricName: "ActiveConnections",
+                Dimensions: [
+                    {
+                        Name: "ServiceName",
+                        Value: "WhiteboardService"
+                    }
+                ],
+                Unit: "Count",
+                Value: connectionsCount
+            }
+        ],
+        Namespace: "Custom/WhiteboardService"
+    };
+
+    cloudwatch.putMetricData(params, (err, data) => {
+        if (err) {
+            console.error("Error publishing metric to CloudWatch:", err.message);
+        } else {
+            console.log("Metric published to CloudWatch:", JSON.stringify(data));
+        }
+    });
+}
 
 async function saveEventsToDatabase(pubClient, mongoClient) {
     const whiteboardEventsCollection = await mongoClient.db("whiteboard").collection("whiteboard_events");

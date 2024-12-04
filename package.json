@@ -22,7 +22,8 @@
       "socket.io-redis": "^5.4.0",
       "uid2": "^1.0.0",
       "utf-8-validate": "^5.0.10",
-      "winston": "^3.17.0"
+      "winston": "^3.17.0",
+      "aws-sdk":"^2.1692.0"
   },
   "devDependencies": {
       "nodemon": "^2.0.20"
