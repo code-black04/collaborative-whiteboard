@@ -73,10 +73,8 @@
     <script src="main.js"></script>
 
     <script>
-      window.onload = function () {
         let reconnectInterval;
 
-        // As served on the same domain as our server, no url provided
         // use WebSocket first if available to avoid using sticky sessions
         const socket = io({
           transports: ["websocket", "polling"] 
@@ -99,7 +97,6 @@
         }
   
         connect();
-      }
     </script>
   </body>
 </html>
