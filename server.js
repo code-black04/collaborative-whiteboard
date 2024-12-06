@@ -1,5 +1,6 @@
 const adapter = require("@socket.io/redis-adapter");
-const redis = require("redis");
+// const redis = require("redis");
+const redisSentinel = require("ioredis");
 const { MongoClient } = require("mongodb");
 const AWS = require("aws-sdk");
 const express = require("express");
@@ -17,8 +18,15 @@ const io = require("socket.io")(http, {
 const dotenv = require("dotenv").config();
 
 const PORT = process.env.PORT || 3000;
-const REDIS_HOST = process.env.REDIS_HOST;
-const REDIS_PORT = process.env.REDIS_PORT;
+const MASTER_REDIS_HOST = process.env.MASTER_REDIS_HOST;
+const MASTER_REDIS_PORT = process.env.MASTER_REDIS_PORT;
+const SLAVE_REDIS_HOST = process.env.SLAVE_REDIS_HOST;
+const SLAVE_REDIS_PORT = process.env.SLAVE_REDIS_PORT;
+const REDIS_MASTER_NAME = process.env.REDIS_MASTER_NAME;
+const SENTINEL_HOSTS_PORT = [
+    { host: MASTER_REDIS_HOST, port: MASTER_REDIS_PORT },
+    { host: SLAVE_REDIS_HOST, port: SLAVE_REDIS_PORT }
+]
 const MONGO_URI = process.env.MONGO_URI;
 const SCHEDULAR_TIME = process.env.SCHEDULAR_TIME;
 const TAKE_SNAPSHOT = process.env.TAKE_SNAPSHOT;
@@ -27,8 +35,6 @@ const AWS_REGION = process.env.AWS_REGION || "eu-west-2";
 AWS.config.update({ region: AWS_REGION });
 const cloudwatch = new AWS.CloudWatch();
 
-console.log("REDIS_HOST:", REDIS_HOST);
-console.log("REDIS_PORT:", REDIS_PORT);
 console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI);
 console.log("SCHEDULAR_TIME:", SCHEDULAR_TIME);
@@ -46,12 +52,16 @@ async function main() {
     }
 
     // Redis setup
-    const pubClient = redis.createClient({
-        socket: {
-            host: REDIS_HOST,
-            port: REDIS_PORT,
-            connectTimeout: 5000,
-            reconnectStrategy: (retries) => (retries > 5 ? undefined : 1000),
+    const pubClient = new redisSentinel({
+        sentinels: SENTINEL_HOSTS_PORT,
+        name: REDIS_MASTER_NAME,
+        sentinelRetryStrategy: (times) => Math.min(times * 1000, 60000),
+        reconnectOnError: (err) => {
+            const targetError = 'READONLY';
+            if (err.message.includes(targetError)) {
+                // Only reconnect when the error contains "READONLY"
+                return true;
+            }
         },
     });
     const subClient = pubClient.duplicate();
@@ -78,7 +88,7 @@ async function main() {
         return crypto.randomBytes(16).toString("hex");
 }
     try {
-        await Promise.all([pubClient.connect(), subClient.connect()]);
+        // await Promise.all([pubClient.connect(), subClient.connect()]);
         io.adapter(adapter.createAdapter(pubClient, subClient));
         console.log("Redis adapter successfully initialized.");
     } catch (err) {
