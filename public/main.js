@@ -240,8 +240,8 @@ window.onload = async function () {
     const config = await response.json();
     const baseUrl = config.baseUrl;
 
-    io = io.connect(baseUrl);
-    
+    io = io.connect(baseUrl, {transports: ["websocket", "polling"]});
+
     for (const [key, value] of Object.entries(eventHandler)) {
         io.on(key, value);
     }
