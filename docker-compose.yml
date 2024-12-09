@@ -2,23 +2,98 @@
 
 version: '3.9'
 services:
-  whiteboard:
-    build:
-      context: .
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "3000:3000"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - whiteboard_one
+      - whiteboard_two
+
+  whiteboard_one:
+    image: whiteboard:1.0
+    # build:
+    #   context: .
+    ports:
+      - "3001:3000"
     env_file: .env
     depends_on:
-      - redis
+      - redis-master
+      - redis-slave
+      - redis-sentinel-master
+      - redis-sentinel-slave
+      - mongo
 
-  redis:
-    image: redis/redis-stack:latest
-    container_name: redis
+  whiteboard_two:
+    image: whiteboard:1.0
+    # build:
+    #   context: .
+    ports:
+      - "3002:3000"
+    env_file: .env
+    environment:
+      TAKE_SNAPSHOT: "false"
+    depends_on:
+      - redis-master
+      - redis-slave
+      - redis-sentinel-master
+      - redis-sentinel-slave
+      - mongo
+
+  redis-master:
+    image: redis:6.0
+    container_name: redis-master
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
+    volumes:
+      - redis-master-data:/data
+    restart: always
 
-  # mongo:
-  #   image: mongo:5
-  #   container_name: mongo-container
-  #   ports:
-  #     - "27017:27017"
+  redis-slave:
+    image: redis:6.0
+    container_name: redis-slave
+    command: ["redis-server", "--appendonly", "yes", "--slaveof", "redis-master", "6379"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-slave-data:/data
+    restart: always
+
+  redis-sentinel-master:
+    image: redis:6.0
+    container_name: redis-sentinel-master
+    command: ["redis-sentinel", "/etc/redis/sentinel.conf"]
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./sentinel.conf:/etc/redis/sentinel.conf
+    restart: always
+
+  redis-sentinel-slave:
+    image: redis:6.0
+    container_name: redis-sentinel-slave
+    command: ["redis-sentinel", "/etc/redis/sentinel.conf"]
+    ports:
+      - "26380:26379"
+    volumes:
+      - ./sentinel.conf:/etc/redis/sentinel.conf
+    restart: always
+
+  mongo:
+    image: mongo:5
+    container_name: mongo-container
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+    # volumes:
+    #   - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+
+volumes:
+  redis-master-data:
+  redis-slave-data:
