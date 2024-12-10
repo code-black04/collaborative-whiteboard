@@ -1,0 +1,66 @@
+version: '3.4'
+
+networks:
+  mongo-cluster:
+
+services:
+  mongo-setup:
+    container_name: mongo-setup
+    image: mongo
+    networks:
+      - mongo-cluster
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: [ "/scripts/setup.sh" ]
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+  
+  mongo1:
+    hostname: mongo1
+    container_name: localmongo1
+    image: mongo
+    expose:
+      - 27017
+    ports:
+      - 27017:27017
+    entrypoint: [ "/usr/bin/mongod", "-f", "/etc/mongod.conf", "--replSet", "rs0", "--dbpath", "/data/db"]
+    volumes:
+      - ./volumes/data1/db:/data/db
+      - ./volumes/data1/mongod.conf:/etc/mongod.conf
+    tty: true
+    networks:
+      - mongo-cluster
+
+  mongo2:
+    hostname: mongo2
+    container_name: localmongo2
+    image: mongo
+    expose:
+      - 27017
+    ports:
+      - 27018:27017
+    entrypoint: [ "/usr/bin/mongod", "-f", "/etc/mongod.conf", "--replSet", "rs0", "--dbpath", "/data/db"]
+    volumes:
+      - ./volumes/data2/db:/data/db
+      - ./volumes/data2/mongod.conf:/etc/mongod.conf
+    tty: true
+    networks:
+      - mongo-cluster
+
+  mongo3:
+    hostname: mongo3
+    container_name: localmongo3
+    image: mongo
+    expose:
+      - 27017
+    ports:
+      - 27019:27017
+    entrypoint: [ "/usr/bin/mongod", "-f", "/etc/mongod.conf", "--replSet", "rs0", "--dbpath", "/data/db"]
+    volumes:
+      - ./volumes/data3/db:/data/db
+      - ./volumes/data3/mongod.conf:/etc/mongod.conf
+    tty: true
+    networks:
+      - mongo-cluster

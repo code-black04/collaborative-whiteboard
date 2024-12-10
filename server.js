@@ -42,13 +42,17 @@ console.log("TAKE_SNAPSHOT:", TAKE_SNAPSHOT);
 
 async function main() {
     // MongoDB setup
-    const mongoClient = new MongoClient(MONGO_URI);
+    // directConnection initiates the replica set if not done already
+    const mongoClient = new MongoClient(MONGO_URI, {replicaSet: "rs0", directConnection: true});
+    
     try {
         await mongoClient.connect();
         console.log("Connected to MongoDB");
     } catch (err) {
         console.error("Failed to connect to MongoDB:", err.message);
-        process.exit(1); // MongoDB is critical; exit if it fails
+        
+        // MongoDB is critical; exit if it fails
+        process.exit(1);
     }
 
     // Redis setup
